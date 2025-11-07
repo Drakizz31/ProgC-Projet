@@ -10,12 +10,10 @@
 #include "bloc.h"
 #include "inode.h"
 
-int main(void)
-{
+int main(void){
     /* 1) Créer un inode numéro 1 de type ORDINAIRE */
     tInode inode = CreerInode(1, ORDINAIRE);
-    if (inode == NULL)
-    {
+    if (inode == NULL){
         fprintf(stderr, "Erreur : impossible de creer l'inode\n");
         return 1;
     }
@@ -26,8 +24,7 @@ int main(void)
 
     /* 3) Écrire dans l'inode (version 1 : 1 bloc) */
     long nbEcrits = EcrireDonneesInode1bloc(inode, message, tailleMessage);
-    if (nbEcrits < 0)
-    {
+    if (nbEcrits < 0){
         fprintf(stderr, "Erreur : ecriture dans l'inode impossible\n");
         DetruireInode(&inode);
         return 1;
@@ -41,8 +38,7 @@ int main(void)
     /* 5) Lire les données depuis l'inode dans un buffer */
     long bufferSize = TAILLE_BLOC + 1; /* +1 pour terminer en string si on veut */
     unsigned char *buffer = malloc((size_t)bufferSize);
-    if (buffer == NULL)
-    {
+    if (buffer == NULL){
         fprintf(stderr, "Erreur : allocation buffer\n");
         DetruireInode(&inode);
         return 1;
@@ -52,8 +48,7 @@ int main(void)
     memset(buffer, 0, (size_t)bufferSize);
 
     long nbLus = LireDonneesInode1bloc(inode, buffer, TAILLE_BLOC);
-    if (nbLus < 0)
-    {
+    if (nbLus < 0) {
         fprintf(stderr, "Erreur : lecture depuis l'inode impossible\n");
         free(buffer);
         DetruireInode(&inode);

@@ -38,10 +38,9 @@ struct sInode
 tInode CreerInode(int numInode, natureFichier type) {
   // Allocation de la structure
     tInode inode = malloc(sizeof(struct sInode));
-    if (inode == NULL)
-    {
-        fprintf(stderr, "CreerInode : probleme creation\n");
-        return NULL;
+    if (inode == NULL){
+      fprintf(stderr, "CreerInode : probleme creation\n");
+      return NULL;
     }
 
     // Initialisation des champs simples
@@ -69,19 +68,19 @@ tInode CreerInode(int numInode, natureFichier type) {
  * Retour : aucun
  */
 void DetruireInode(tInode *pInode) {
-  if (pInode == NULL || *pInode == NULL)
-        return;
-
-    // Libérer chaque bloc si il existe
-    for (int i = 0; i < NB_BLOCS_DIRECTS; i++){
-      if ((*(*pInode)).blocDonnees[i] != NULL){
-        DetruireBloc(&((*(*pInode)).blocDonnees[i]));
-      }
+  if (pInode == NULL || *pInode == NULL){
+    return;
+  }
+  // Libérer chaque bloc si il existe
+  for (int i = 0; i < NB_BLOCS_DIRECTS; i++){
+    if ((*(*pInode)).blocDonnees[i] != NULL){
+      DetruireBloc(&((*(*pInode)).blocDonnees[i]));
     }
+  }
 
-    // Libérer l'inode
-    free(*pInode);
-    *pInode = NULL;
+  // Libérer l'inode
+  free(*pInode);
+  *pInode = NULL;
 }
 
 /* V1
@@ -106,7 +105,6 @@ time_t DateDerModif(tInode inode) {
   if (inode == NULL){
     return (time_t)0;
   }
-
   return (*inode).dateDerModifInode;
 }
 
@@ -132,7 +130,6 @@ unsigned int Numero(tInode inode) {
   if (inode == NULL){
     return 0u;
   }
-
   return (*inode).numero;
 }
 

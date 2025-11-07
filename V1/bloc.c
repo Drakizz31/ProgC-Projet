@@ -18,18 +18,18 @@
  */
 tBloc CreerBloc (void) {
   // Allocation d’un bloc de TAILLE_BLOC octets
-    tBloc bloc = malloc(TAILLE_BLOC);
+  tBloc bloc = malloc(TAILLE_BLOC);
 
-    // Vérification d’erreur
-    if (bloc == NULL) {
-        fprintf(stderr, "CreerBloc : probleme creation\n");
-        return NULL;
-    }
+  // Vérification d’erreur
+  if (bloc == NULL) {
+    fprintf(stderr, "CreerBloc : probleme creation\n");
+    return NULL;
+  }
 
-    // On initialise le bloc à zéro pour éviter des valeurs aléatoires
-    memset(bloc, 0, TAILLE_BLOC);
+  // On initialise le bloc à zéro pour éviter des valeurs aléatoires
+  memset(bloc, 0, TAILLE_BLOC);
 
-    return bloc;
+  return bloc;
 }
 
 /* V1
@@ -39,11 +39,10 @@ tBloc CreerBloc (void) {
  */
 void DetruireBloc(tBloc *pBloc) {
   // Vérifie qu'il existe bien quelque chose à détruire
-    if (pBloc != NULL && *pBloc != NULL) {
-
-        free(*pBloc);   // libération mémoire
-        *pBloc = NULL;  // on met le pointeur à NULL pour éviter les pointeurs pendants
-    }
+  if (pBloc != NULL && *pBloc != NULL) {
+    free(*pBloc);   // libération mémoire
+    *pBloc = NULL;  // on met le pointeur à NULL pour éviter les pointeurs pendants
+  }
 }
 
 /* V1
@@ -55,7 +54,7 @@ void DetruireBloc(tBloc *pBloc) {
 long EcrireContenuBloc (tBloc bloc, unsigned char *contenu, long taille) {
   // Si bloc ou contenu n'existent pas, erreur
   if (bloc == NULL || contenu == NULL || taille <= 0) {
-      return 0;
+    return 0;
   }
 
   // On limite la taille au maximum possible
