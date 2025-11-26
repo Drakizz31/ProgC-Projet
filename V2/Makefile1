@@ -1,0 +1,22 @@
+# Makefile2 - compilation pour la version 2 du projet SF
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11 -g
+SRCS = sf.c inode.c bloc.c gerer_sf_v2.c
+OBJS = $(SRCS:.c=.o)
+TARGET = gerer_sfv2
+
+.PHONY: all clean run
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJS) $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
