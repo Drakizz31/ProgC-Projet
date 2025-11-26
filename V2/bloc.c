@@ -6,6 +6,10 @@
  **/
 
 #include "bloc.h"
+#include <stdlib.h>   // pour malloc / free
+#include <stdio.h>    // pour fprintf(stderr)
+#include <string.h>   // pour memcpy
+
 
 /* V1
  * Crée et retourne un nouveau bloc de données.
@@ -13,7 +17,19 @@
  * Retour : le bloc créé ou NULL en cas de problème
  */
 tBloc CreerBloc (void) {
-  // A COMPLETER
+  // Allocation d’un bloc de TAILLE_BLOC octets
+  tBloc bloc = malloc(TAILLE_BLOC);
+
+  // Vérification d’erreur
+  if (bloc == NULL) {
+    fprintf(stderr, "CreerBloc : probleme creation\n");
+    return NULL;
+  }
+
+  // On initialise le bloc à zéro pour éviter des valeurs aléatoires
+  memset(bloc, 0, TAILLE_BLOC);
+
+  return bloc;
 }
 
 /* V1
@@ -22,7 +38,11 @@ tBloc CreerBloc (void) {
  * Retour : aucun
  */
 void DetruireBloc(tBloc *pBloc) {
-  // A COMPLETER
+  // Vérifie qu'il existe bien quelque chose à détruire
+  if (pBloc != NULL && *pBloc != NULL) {
+    free(*pBloc);   // libération mémoire
+    *pBloc = NULL;  // on met le pointeur à NULL pour éviter les pointeurs pendants
+  }
 }
 
 /* V1
@@ -32,7 +52,18 @@ void DetruireBloc(tBloc *pBloc) {
  * Retour : le nombre d'octets effectivement écrits dans le bloc
  */
 long EcrireContenuBloc (tBloc bloc, unsigned char *contenu, long taille) {
-  // A COMPLETER
+  // Si bloc ou contenu n'existent pas, erreur
+  if (bloc == NULL || contenu == NULL || taille <= 0) {
+    return 0;
+  }
+
+  // On limite la taille au maximum possible
+  long nbOctets = (taille > TAILLE_BLOC) ? TAILLE_BLOC : taille;
+
+  // Copie en mémoire
+  memcpy(bloc, contenu, nbOctets);
+
+  return nbOctets;
 }
 
 /* V1
@@ -42,5 +73,16 @@ long EcrireContenuBloc (tBloc bloc, unsigned char *contenu, long taille) {
  * Retour : le nombre d'octets effectivement lus dans le bloc
  */
 long LireContenuBloc(tBloc bloc, unsigned char *contenu, long taille) {
-  // A COMPLETER
+  // Vérifications de sécurité
+  if (bloc == NULL || contenu == NULL || taille <= 0) {
+    return 0;
+  }
+
+  // Limite de lecture
+  long nbOctets = (taille > TAILLE_BLOC) ? TAILLE_BLOC : taille;
+
+  // Copie en mémoire
+  memcpy(contenu, bloc, nbOctets);
+
+  return nbOctets;
 }
