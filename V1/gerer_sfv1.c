@@ -5,64 +5,46 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-
-#include "bloc.h"
 #include "inode.h"
 
-int main(void){
-    /* 1) Créer un inode numéro 1 de type ORDINAIRE */
-    tInode inode = CreerInode(1, ORDINAIRE);
-    if (inode == NULL){
-        fprintf(stderr, "Erreur : impossible de creer l'inode\n");
-        return 1;
-    }
+#define TAILLE_BUFFER 100
 
-    /* 2) Préparer une petite chaîne à écrire (moins qu'un bloc) */
-    unsigned char message[] = "Bonjour, test inode V1";
-    long tailleMessage = (long)strlen((char *)message);
+int main(void) 
+{
+    tInode inode;
 
-    /* 3) Écrire dans l'inode (version 1 : 1 bloc) */
-    long nbEcrits = EcrireDonneesInode1bloc(inode, message, tailleMessage);
-    if (nbEcrits < 0){
-        fprintf(stderr, "Erreur : ecriture dans l'inode impossible\n");
-        DetruireInode(&inode);
-        return 1;
-    }
-
-    printf("Bytes écrits dans l'inode : %ld\n", nbEcrits);
-
-    /* 4) Afficher l'inode (informations générales) */
+    /* Créer un inode numéro 0 de type ORDINAIRE */
+    inode = CreerInode(0, ORDINAIRE);
+    printf("** Inode cree\n");
     AfficherInode(inode);
 
-    /* 5) Lire les données depuis l'inode dans un buffer */
-    long bufferSize = TAILLE_BLOC + 1; /* +1 pour terminer en string si on veut */
-    unsigned char *buffer = malloc((size_t)bufferSize);
-    if (buffer == NULL){
-        fprintf(stderr, "Erreur : allocation buffer\n");
-        DetruireInode(&inode);
-        return 1;
-    }
+    /* Ecrire/stocker dans cet inode un "fichier" */
+    char unContenu[TAILLE_BUFFER];
+    strcpy(unContenu, "Bonjour, Monde !");
+    long tailleOctetsContenu = sizeof(char) * (strlen(unContenu) + 1);
 
-    /* initialiser à zéro pour garantir une terminaison de chaîne */
-    memset(buffer, 0, (size_t)bufferSize);
+    long nb_ecrits =
+        EcrireDonneesInode1bloc(inode, (unsigned char *)unContenu, tailleOctetsContenu);
 
-    long nbLus = LireDonneesInode1bloc(inode, buffer, TAILLE_BLOC);
-    if (nbLus < 0) {
-        fprintf(stderr, "Erreur : lecture depuis l'inode impossible\n");
-        free(buffer);
-        DetruireInode(&inode);
-        return 1;
-    }
+    printf("\nNombre d'octets ecrits : %ld\n", nb_ecrits);
 
-    printf("Bytes lus depuis l'inode : %ld\n", nbLus);
-    printf("Contenu lu (interprete comme chaine) : %s\n", (char *)buffer);
+    printf("\n*** Inode rempli\n");
+    AfficherInode(inode);
 
-    /* 6) Nettoyage : libérer le buffer et détruire l'inode */
-    free(buffer);
+    /* Lire le contenu du fichier stocké dans l'inode */
+    char buffer[TAILLE_BUFFER];
+    long nb_lus = LireDonneesInode1bloc(inode, (unsigned char *)buffer, sizeof(char) * (TAILLE_BUFFER - 1));
+
+    buffer[nb_lus] = '\0'; /* On termine en chaîne de caractères */
+
+    printf("\n*** Lecture du contenu de l'inode :\n");
+    printf("Nombre d'octets lus : %ld\n", nb_lus);
+    printf("Contenu lu : %s\n", buffer);
+
+    /* Détruire l'inode */
     DetruireInode(&inode);
 
-    printf("Test termine avec succes.\n");
+    printf("\n*** Inode detruit : tests OK!\n");
 
     return 0;
 }
