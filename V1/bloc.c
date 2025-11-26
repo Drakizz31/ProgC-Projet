@@ -7,7 +7,7 @@
 
 #include "bloc.h"
 #include <stdlib.h>   // pour malloc / free
-#include <stdio.h>    // pour fprintf(stderr, ...)
+#include <stdio.h>    // pour fprintf(stderr)
 #include <string.h>   // pour memcpy
 
 

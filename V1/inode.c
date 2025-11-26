@@ -78,7 +78,6 @@ void DetruireInode(tInode *pInode) {
     }
   }
 
-  // Libérer l'inode
   free(*pInode);
   *pInode = NULL;
 }
