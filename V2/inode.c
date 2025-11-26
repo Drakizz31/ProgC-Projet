@@ -146,7 +146,7 @@ long Taille(tInode inode) {
 }
 /* V1
  * Récupère le type du fichier associé à un inode.
- * Entrée : l'inode pour lequel on souhaite connaître le tyep de fichier associé
+ * Entrée : l'inode pour lequel on souhaite connaître le type de fichier associé
  * Retour : le type du fichier associé à l'inode
  */
 natureFichier Type(tInode inode) {
