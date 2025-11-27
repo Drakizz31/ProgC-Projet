@@ -7,6 +7,10 @@
 
 #include "sf.h"
 #include "bloc.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 // Taille maximale du nom du SF (ou nom du disque)
 #define TAILLE_NOM_DISQUE 24

@@ -54,7 +54,7 @@ int main(void) {
                 printf("Un SF existe deja. Il sera detruit avant de creer le nouveau.\n");
                 DetruireSF(&sf);
             }
-            printf("Nom du disque (<= %d chars) : ", TAILLE_NOM_DISQUE);
+            printf("Nom du disque (<= %d chars) : ", TAILLE_NOM_FICHIER);
             lire_ligne(buffer, sizeof(buffer));
             if (strlen(buffer) == 0) {
                 printf("Nom vide -> annulation.\n");
