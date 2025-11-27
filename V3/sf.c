@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#define MAX_FICHIER_OCTETS (10 * TAILLE_BLOC)
+
 
 // Taille maximale du nom du SF (ou nom du disque)
 #define TAILLE_NOM_DISQUE 24
@@ -274,7 +276,7 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type) {
     FILE *f = fopen(nomFichier, "rb");
     if (f == NULL) return -1;
 
-    unsigned char buffer[NB_BLOCS_DIRECTS * TAILLE_BLOC];
+    unsigned char buffer[MAX_FICHIER_OCTETS];
     long nbLus = fread(buffer, 1, sizeof(buffer), f);
     fclose(f);
 
