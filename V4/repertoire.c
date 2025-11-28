@@ -6,6 +6,7 @@
  **/
 #include "repertoire.h"
 #include "inode.h"
+#include "bloc.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,9 +25,10 @@ struct sRepertoire
 /* Calcule le nombre maximal d'entrées pouvant tenir dans un inode */
 static int NbMaxEntrees(void)
 {
-    int tailleEntree = TAILLE_NOM_FICHIER + 1 + (int)sizeof(unsigned int);
+    int tailleEntree = sizeof(struct sEntreesRepertoire);
     return MAX_FICHIER_OCTETS / tailleEntree;
 }
+
 
 /* V4
  * Crée un nouveau répertoire.

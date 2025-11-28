@@ -1,5 +1,5 @@
 /**
- * ProgC - Projet Automne 25-26 : Gestion de systèmes de fichiers
+ * ProgC - Projet Automne 25-26 : Gestion d'un systèmes de fichiers
  * VERSION 4
  * Fichier : sf.c
  * Module de gestion d'un systèmes de fichiers (simulé)
@@ -7,12 +7,13 @@
 
 #include "sf.h"
 #include "bloc.h"
+#include "repertoire.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#define MAX_FICHIER_OCTETS (10 * TAILLE_BLOC)
 
+#define MAX_FICHIER_OCTETS (10 * TAILLE_BLOC)
 
 // Taille maximale du nom du SF (ou nom du disque)
 #define TAILLE_NOM_DISQUE 24
@@ -106,53 +107,88 @@ static void AfficherSuperBloc(tSuperBloc superBloc)
     }
 
     char buf[32];
-    strcpy(buf, ctime(&(superBloc->dateDerModif)));
-    buf[strlen(buf)-1] = '\0';
+    strncpy(buf, ctime(&(superBloc->dateDerModif)), sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
+    if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n') buf[strlen(buf)-1] = '\0';
 
     printf("Super-bloc :\n");
     printf("  Nom du disque       : %s\n", superBloc->nomDisque);
     printf("  Date derniere modif : %s\n", buf);
 }
 
-
-/* V2 & V4
+/* V4
  * Crée un nouveau système de fichiers.
  * Entrée : nom du disque à associer au système de fichiers créé
  * Retour : le système de fichiers créé, ou NULL en cas d'erreur
+ *
+ * Remarque : on crée aussi l'inode 0 (répertoire racine, vide).
  */
 tSF CreerSF(char nomDisque[])
 {
+    if (nomDisque == NULL) return NULL;
+
     tSF sf = malloc(sizeof(struct sSF));
-    if (sf == NULL)
-    {
+    if (sf == NULL) {
         fprintf(stderr, "CreerSF : probleme allocation SF\n");
         return NULL;
     }
 
-    /* Nom */
-    strncpy(sf->nomDisque, nomDisque, TAILLE_NOM_FICHIER);
-    sf->nomDisque[TAILLE_NOM_FICHIER] = '\0';
-
-    /* Initialisation blocs */
-    for (int i = 0; i < NB_BLOCS_DISQUE; i++)
-        sf->bloc[i] = CreerBloc();
-
-    /* Initialisation inodes */
-    for (int i = 0; i < NB_INODES; i++)
-        sf->inodes[i] = CreerInode();
-
-    /* Création du répertoire racine */
-    sf->racine = CreerRepertoire();
-    if (sf->racine == NULL)
-    {
-        fprintf(stderr, "Erreur création répertoire racine\n");
-        DetruireSF(&sf);
+    sf->superBloc = CreerSuperBloc(nomDisque);
+    if (sf->superBloc == NULL) {
+        free(sf);
         return NULL;
     }
 
+    sf->listeInodes.premier = NULL;
+    sf->listeInodes.dernier = NULL;
+    sf->listeInodes.nbInodes = 0;
+
+    /* Créer inode 0 : répertoire racine */
+    tInode inode0 = CreerInode(0, REPERTOIRE);
+    if (inode0 == NULL) {
+        DetruireSuperBloc(&(sf->superBloc));
+        free(sf);
+        return NULL;
+    }
+
+    /* Écrire un répertoire vide dans inode 0 */
+    tRepertoire rep = CreerRepertoire();
+    if (rep == NULL) {
+        DetruireInode(&inode0);
+        DetruireSuperBloc(&(sf->superBloc));
+        free(sf);
+        return NULL;
+    }
+
+    if (EcrireRepertoireDansInode(rep, inode0) != 0) {
+        DetruireRepertoire(&rep);
+        DetruireInode(&inode0);
+        DetruireSuperBloc(&(sf->superBloc));
+        free(sf);
+        return NULL;
+    }
+
+    DetruireRepertoire(&rep);
+
+    /* Ajouter inode0 à la liste chaînée */
+    struct sListeInodesElement *elem = malloc(sizeof(struct sListeInodesElement));
+    if (elem == NULL) {
+        DetruireInode(&inode0);
+        DetruireSuperBloc(&(sf->superBloc));
+        free(sf);
+        return NULL;
+    }
+
+    elem->inode = inode0;
+    elem->suivant = NULL;
+    sf->listeInodes.premier = elem;
+    sf->listeInodes.dernier = elem;
+    sf->listeInodes.nbInodes = 1;
+
+    sf->superBloc->dateDerModif = time(NULL);
+
     return sf;
 }
-
 
 /* V2
  * Détruit un système de fichiers et libère la mémoire associée.
@@ -211,6 +247,8 @@ void AfficherSF(tSF sf)
  * Ecrit un fichier d'un seul bloc dans le système de fichiers.
  * Entrées : le système de fichiers, le nom du fichier (sur disque) et son type dans le SF (simulé)
  * Sortie : le nombre d'octets effectivement écrits, -1 en cas d'erreur.
+ *
+ * (conserve la version précédente)
  */
 long Ecrire1BlocFichierSF(tSF sf, char nomFichier[], natureFichier type)
 {
@@ -281,6 +319,8 @@ long Ecrire1BlocFichierSF(tSF sf, char nomFichier[], natureFichier type)
  * seuls les 640 premiers octets seront écrits dans le système de fichiers.
  * Entrées : le système de fichiers, le nom du fichier (sur disque) et son type dans le SF (simulé)
  * Sortie : le nombre d'octets effectivement écrits, -1 en cas d'erreur.
+ *
+ * En V4 : met aussi à jour le répertoire racine (inode 0).
  */
 long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
 {
@@ -291,12 +331,11 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
 
     FILE *f = fopen(nomFichier, "rb");
     if (f == NULL) {
-        fprintf(stderr, "EcrireFichierSF : impossible d’ouvrir %s\n", nomFichier);
+        fprintf(stderr, "EcrireFichierSF : impossible d'ouvrir %s\n", nomFichier);
         return -1;
     }
 
     long tailleMax = TailleMaxFichier();
-
     unsigned char *buffer = malloc(tailleMax);
     if (buffer == NULL) {
         fclose(f);
@@ -308,6 +347,7 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
 
     if (nbLus < 0) nbLus = 0;
 
+    /* Créer nouvel inode */
     int numInode = sf->listeInodes.nbInodes;
     tInode inode = CreerInode(numInode, type);
     if (inode == NULL) {
@@ -323,6 +363,7 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
         return -1;
     }
 
+    /* Ajouter inode à la liste chaînée */
     struct sListeInodesElement *elem = malloc(sizeof(struct sListeInodesElement));
     if (elem == NULL) {
         DetruireInode(&inode);
@@ -341,11 +382,50 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
     }
 
     sf->listeInodes.nbInodes++;
+
+    /* Mettre à jour le répertoire racine (inode 0) */
+    /* Trouver inode 0 dans la liste */
+    struct sListeInodesElement *it = sf->listeInodes.premier;
+    tInode inode0 = NULL;
+    while (it != NULL) {
+        if (Numero(it->inode) == 0u) {
+            inode0 = it->inode;
+            break;
+        }
+        it = it->suivant;
+    }
+
+    if (inode0 == NULL) {
+        /* Pas d'inode 0 : erreur (normalement créé dans CreerSF) */
+        return (long)nbEcrits; /* fichier écrit mais pas ajouté au répertoire */
+    }
+
+    /* Lire répertoire depuis inode0 */
+    tRepertoire rep = NULL;
+    if (LireRepertoireDepuisInode(&rep, inode0) != 0) {
+        /* n'arrive pas à lire le répertoire -> on laisse le fichier écrit */
+        return (long)nbEcrits;
+    }
+
+    /* Ajouter l'entrée (nomFichier tel quel dans la racine) */
+    if (EcrireEntreeRepertoire(rep, nomFichier, (unsigned int)numInode) != 0) {
+        DetruireRepertoire(&rep);
+        return (long)nbEcrits;
+    }
+
+    /* Écrire le répertoire modifié dans inode0 */
+    if (EcrireRepertoireDansInode(rep, inode0) != 0) {
+        DetruireRepertoire(&rep);
+        return (long)nbEcrits;
+    }
+
+    DetruireRepertoire(&rep);
+
+    /* Mise à jour du super-bloc */
     sf->superBloc->dateDerModif = time(NULL);
 
     return nbEcrits;
 }
-
 
 /* V3
  * Sauvegarde un système de fichiers dans un fichier (sur disque).
@@ -583,7 +663,6 @@ int Ls(tSF sf, bool detail) {
                    tab[i].nomEntree);
         }
     }
-
     free(tab);
     DetruireRepertoire(&rep);
     return 0;
