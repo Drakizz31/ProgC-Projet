@@ -320,7 +320,12 @@ long Ecrire1BlocFichierSF(tSF sf, char nomFichier[], natureFichier type)
 
 /* V3 & V4
  * Ecrit un fichier (d'un nombre de blocs quelconque) dans le système de fichiers.
- * Si la taille du fichier dépasse 10 blocs, seuls les 640 premiers octets sont écrits.
+ * Si la taille du fichier à écrire dépasse la taille maximale d'un fichier dans le SF(10 x 64 octets),
+ * seuls les 640 premiers octets seront écrits dans le système de fichiers.
+ * Entrées : le système de fichiers, le nom du fichier (sur disque) et son type dans le SF (simulé)
+ * Sortie : le nombre d'octets effectivement écrits, -1 en cas d'erreur.
+ *
+ * En V4 : met aussi à jour le répertoire racine (inode 0).
  */
 long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
 {
