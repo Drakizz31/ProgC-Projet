@@ -15,6 +15,9 @@
 
 #define MAX_FICHIER_OCTETS (10 * TAILLE_BLOC)
 
+/* Déclaration externe car TailleMaxFichier est dans inode.c */
+extern long TailleMaxFichier(void);
+
 // Taille maximale du nom du SF (ou nom du disque)
 #define TAILLE_NOM_DISQUE 24
 
@@ -109,7 +112,8 @@ static void AfficherSuperBloc(tSuperBloc superBloc)
     char buf[32];
     strncpy(buf, ctime(&(superBloc->dateDerModif)), sizeof(buf)-1);
     buf[sizeof(buf)-1] = '\0';
-    if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n') buf[strlen(buf)-1] = '\0';
+    if (strlen(buf) > 0 && buf[strlen(buf)-1] == '\n')
+        buf[strlen(buf)-1] = '\0';
 
     printf("Super-bloc :\n");
     printf("  Nom du disque       : %s\n", superBloc->nomDisque);
@@ -245,7 +249,8 @@ void AfficherSF(tSF sf)
 
 /* V2
  * Ecrit un fichier d'un seul bloc dans le système de fichiers.
- * Entrées : le système de fichiers, le nom du fichier (sur disque) et son type dans le SF (simulé)
+ * Entrées : le système de fichiers, le nom du fichier (sur disque)
+ * et son type dans le SF (simulé)
  * Sortie : le nombre d'octets effectivement écrits, -1 en cas d'erreur.
  *
  * (conserve la version précédente)
@@ -315,12 +320,7 @@ long Ecrire1BlocFichierSF(tSF sf, char nomFichier[], natureFichier type)
 
 /* V3 & V4
  * Ecrit un fichier (d'un nombre de blocs quelconque) dans le système de fichiers.
- * Si la taille du fichier à écrire dépasse la taille maximale d'un fichier dans le SF(10 x 64 octets),
- * seuls les 640 premiers octets seront écrits dans le système de fichiers.
- * Entrées : le système de fichiers, le nom du fichier (sur disque) et son type dans le SF (simulé)
- * Sortie : le nombre d'octets effectivement écrits, -1 en cas d'erreur.
- *
- * En V4 : met aussi à jour le répertoire racine (inode 0).
+ * Si la taille du fichier dépasse 10 blocs, seuls les 640 premiers octets sont écrits.
  */
 long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
 {
@@ -384,7 +384,6 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
     sf->listeInodes.nbInodes++;
 
     /* Mettre à jour le répertoire racine (inode 0) */
-    /* Trouver inode 0 dans la liste */
     struct sListeInodesElement *it = sf->listeInodes.premier;
     tInode inode0 = NULL;
     while (it != NULL) {
@@ -396,36 +395,34 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
     }
 
     if (inode0 == NULL) {
-        /* Pas d'inode 0 : erreur (normalement créé dans CreerSF) */
-        return (long)nbEcrits; /* fichier écrit mais pas ajouté au répertoire */
+        return nbEcrits;
     }
 
-    /* Lire répertoire depuis inode0 */
+    /* Lire répertoire */
     tRepertoire rep = NULL;
     if (LireRepertoireDepuisInode(&rep, inode0) != 0) {
-        /* n'arrive pas à lire le répertoire -> on laisse le fichier écrit */
-        return (long)nbEcrits;
+        return nbEcrits;
     }
 
-    /* Ajouter l'entrée (nomFichier tel quel dans la racine) */
+    /* Ajouter entrée */
     if (EcrireEntreeRepertoire(rep, nomFichier, (unsigned int)numInode) != 0) {
         DetruireRepertoire(&rep);
-        return (long)nbEcrits;
+        return nbEcrits;
     }
 
-    /* Écrire le répertoire modifié dans inode0 */
+    /* Réécrire répertoire */
     if (EcrireRepertoireDansInode(rep, inode0) != 0) {
         DetruireRepertoire(&rep);
-        return (long)nbEcrits;
+        return nbEcrits;
     }
 
     DetruireRepertoire(&rep);
 
-    /* Mise à jour du super-bloc */
     sf->superBloc->dateDerModif = time(NULL);
 
     return nbEcrits;
 }
+
 
 /* V3
  * Sauvegarde un système de fichiers dans un fichier (sur disque).
