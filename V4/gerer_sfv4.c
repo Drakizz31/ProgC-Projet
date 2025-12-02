@@ -134,7 +134,6 @@ int main()
             printf("Choix invalide.\n");
         }
     }
-
     if (sf != NULL) {
         DetruireSF(&sf);
     }
