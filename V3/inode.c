@@ -187,7 +187,7 @@ void AfficherInode(tInode inode) {
     tm_info = localtime(&(*inode).dateDerModifInode);
     strftime(buf, 26, "%Y-%m-%d %H:%M:%S", tm_info);
     printf("Date modif inode : %s\n", buf);
-
+    
     // Blocs utilisés
     printf("Blocs utilises :\n");
     for (int i = 0; i < NB_BLOCS_DIRECTS; i++) {
