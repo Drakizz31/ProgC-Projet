@@ -2,141 +2,66 @@
  * ProgC - Projet Automne 25-26 : Gestion de systèmes de fichiers
  * VERSION 4
  * Fichier : gerer_sfv4.c
- * Programme principal de test pour le SF version 4
+ * Programme de test simplifié (sans IHM)
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "sf.h"   
+#include "sf.h"
+#include "bloc.h"
+#include "inode.h"
+#include "repertoire.h"
+
+/* Déclarations locales (on ne peut pas modifier sf.h) */
 int SauvegarderSF(tSF sf, char nomFichier[]);
-int ChargerSF(tSF *pSF, char nomFichier[])
+int ChargerSF(tSF *pSF, char nomFichier[]);
 
-static void afficherMenu()
-{
-    printf("\n========= MENU SF V4 =========\n");
-    printf("1 : Creer un systeme de fichiers\n");
-    printf("2 : Afficher le systeme de fichiers\n");
-    printf("3 : Ecrire fichier (taille illimitée)\n");
-    printf("4 : Sauvegarder SF dans un fichier\n");
-    printf("5 : Charger SF depuis un fichier\n");
-    printf("6 : Lister le repertoire racine (ls)\n");
-    printf("7 : Lister le repertoire racine (ls -l)\n");
-    printf("0 : Quitter\n");
-    printf("Choix : ");
-    fflush(stdout);
-}
-
-int main()
-{
+int main() {
     tSF sf = NULL;
-    int choix = -1;
-    char nom[128];
 
-    while (choix != 0) {
-
-        afficherMenu();
-        scanf("%d", &choix);
-
-        if (choix == 1) {
-            printf("Nom du disque : ");
-            scanf("%127s", nom);
-
-            if (sf != NULL) {
-                DetruireSF(&sf);
-            }
-
-            sf = CreerSF(nom);
-
-            if (sf == NULL) {
-                printf("Erreur : impossible de creer le SF\n");
-            } else {
-                printf("Systeme de fichiers cree.\n");
-            }
-        }
-
-        else if (choix == 2) {
-            if (sf == NULL) {
-                printf("Aucun SF charge.\n");
-            } else {
-                AfficherSF(sf);
-            }
-        }
-
-        else if (choix == 3) {
-            if (sf == NULL) {
-                printf("Aucun SF charge.\n");
-            } else {
-                printf("Nom du fichier a ecrire : ");
-                scanf("%127s", nom);
-
-                long res = EcrireFichierSF(sf, nom, ORDINAIRE);
-
-                if (res < 0) {
-                    printf("Erreur ecriture fichier.\n");
-                } else {
-                    printf("Fichier ecrit (%ld octets).\n", res);
-                }
-            }
-        }
-
-        else if (choix == 4) {
-            if (sf == NULL) {
-                printf("Aucun SF charge.\n");
-            } else {
-                printf("Nom du fichier de sauvegarde : ");
-                scanf("%127s", nom);
-
-                if (SauvegarderSF(sf, nom) == 0) {
-                    printf("Sauvegarde reussie.\n");
-                } else {
-                    printf("Erreur sauvegarde.\n");
-                }
-            }
-        }
-
-        else if (choix == 5) {
-            printf("Nom du fichier a charger : ");
-            scanf("%127s", nom);
-
-            if (sf != NULL) {
-                DetruireSF(&sf);
-            }
-
-            if (ChargerSF(&sf, nom) == 0) {
-                printf("Chargement reussi.\n");
-            } else {
-                printf("Erreur chargement.\n");
-            }
-        }
-
-        else if (choix == 6) {
-            if (sf == NULL) {
-                printf("Aucun SF charge.\n");
-            } else {
-                Ls(sf, false);
-            }
-        }
-
-        else if (choix == 7) {
-            if (sf == NULL) {
-                printf("Aucun SF charge.\n");
-            } else {
-                Ls(sf, true);
-            }
-        }
-
-        else if (choix == 0) {
-            printf("Fin du programme.\n");
-        }
-
-        else {
-            printf("Choix invalide.\n");
-        }
+    printf("=== Creation SF ===\n");
+    sf = CreerSF("monDisque");
+    if (!sf) {
+        printf("Erreur creation SF\n");
+        return 1;
     }
-    if (sf != NULL) {
-        DetruireSF(&sf);
+
+    printf("=== Ecriture d'un fichier dans le SF ===\n");
+    long ecrit = EcrireFichierSF(sf, "test.txt", ORDINAIRE);
+    printf("Octets ecrits : %ld\n", ecrit);
+
+    printf("\n=== Affichage SF ===\n");
+    AfficherSF(sf);
+
+    printf("\n=== LS simple ===\n");
+    Ls(sf, false);
+
+    printf("\n=== LS detail ===\n");
+    Ls(sf, true);
+
+    printf("\n=== Sauvegarde SF dans fichier 'save.sf' ===\n");
+    if (SauvegarderSF(sf, "save.sf") == 0)
+        printf("Sauvegarde OK.\n");
+    else
+        printf("Erreur sauvegarde.\n");
+
+    DetruireSF(&sf);
+
+    printf("\n=== Chargement du SF depuis save.sf ===\n");
+    if (ChargerSF(&sf, "save.sf") == 0)
+        printf("Chargement OK.\n");
+    else {
+        printf("Erreur chargement.\n");
+        return 1;
     }
+
+    printf("\n=== LS après chargement ===\n");
+    Ls(sf, true);
+
+    DetruireSF(&sf);
+    printf("\n=== Programme termine ===\n");
 
     return 0;
 }
+ 

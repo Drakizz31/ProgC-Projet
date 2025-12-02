@@ -172,10 +172,24 @@ void AfficherInode(tInode inode) {
     printf("---- INODE %u ----\n", (*inode).numero);
     printf("Type : %d\n", (*inode).type);
     printf("Taille : %ld octets\n", (*inode).taille);
-    printf("Date accès : %ld\n", (*inode).dateDerAcces);
-    printf("Date modif fichier : %ld\n", (*inode).dateDerModif);
-    printf("Date modif inode : %ld\n", (*inode).dateDerModifInode);
 
+    // Conversion des timestamps en dates lisibles pour la v3 car sinon ça écrivait des timestamps UNIX.
+    char buf[26];
+    struct tm *tm_info;
+
+    tm_info = localtime(&(*inode).dateDerAcces);
+    strftime(buf, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    printf("Date accès : %s\n", buf);
+
+    tm_info = localtime(&(*inode).dateDerModif);
+    strftime(buf, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    printf("Date modif fichier : %s\n", buf);
+
+    tm_info = localtime(&(*inode).dateDerModifInode);
+    strftime(buf, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    printf("Date modif inode : %s\n", buf);
+    
+    // Blocs utilisés
     printf("Blocs utilises :\n");
     for (int i = 0; i < NB_BLOCS_DIRECTS; i++) {
         if ((*inode).blocDonnees[i] != NULL) {
