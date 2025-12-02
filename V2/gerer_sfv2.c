@@ -33,11 +33,11 @@ int main(void) {
     }
 
     // 3) Ajout d'un fichier REPERTOIRE
-    nb = Ecrire1BlocFichierSF(sf, "dossier1", REPERTOIRE);
+    nb = Ecrire1BlocFichierSF(sf, "dossierV2", REPERTOIRE);
     if (nb < 0) {
         printf("Erreur lors de l'ajout de dossier1\n");
     } else {
-        printf("Repertoire 'dossier1' ajoute, %ld octets ecrits.\n", nb);
+        printf("Repertoire 'dossierV2' ajoute, %ld octets ecrits.\n", nb);
     }
 
     // 4) Affichage du système de fichiers

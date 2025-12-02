@@ -19,11 +19,11 @@ int main(void) {
     printf("SF cree avec succes.\n");
 
     // 2) Ajout d'un fichier ORDINAIRE (multi-blocs)
-    nb = EcrireFichierSF(sf, "fichierV3.txt", ORDINAIRE);
+    nb = EcrireFichierSF(sf, "testV3.txt", ORDINAIRE);
     if (nb < 0)
-        printf("Erreur lors de l'ajout de 'fichierV3.txt'\n");
+        printf("Erreur lors de l'ajout de 'testV3.txt'\n");
     else
-        printf("Fichier 'fichierV3.txt' ajoute, %ld octets ecrits.\n", nb);
+        printf("Fichier 'testV3.txt' ajoute, %ld octets ecrits.\n", nb);
 
     // 3) Ajout d'un répertoire (simulé)
     nb = EcrireFichierSF(sf, "dossierV3", REPERTOIRE);

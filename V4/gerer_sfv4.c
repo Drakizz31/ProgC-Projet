@@ -28,7 +28,7 @@ int main() {
     }
 
     printf("=== Ecriture d'un fichier dans le SF ===\n");
-    long ecrit = EcrireFichierSF(sf, "test.txt", ORDINAIRE);
+    long ecrit = EcrireFichierSF(sf, "testV4.txt", ORDINAIRE);
     printf("Octets ecrits : %ld\n", ecrit);
 
     printf("\n=== Affichage SF ===\n");
