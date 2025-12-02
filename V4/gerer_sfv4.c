@@ -8,11 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "sf.h"
-#include "bloc.h"
-#include "inode.h"
-#include "repertoire.h"
-
+#include "sf.h"   
+int SauvegarderSF(tSF sf, char nomFichier[]);
+int ChargerSF(tSF *pSF, char nomFichier[])
 
 static void afficherMenu()
 {
@@ -26,6 +24,7 @@ static void afficherMenu()
     printf("7 : Lister le repertoire racine (ls -l)\n");
     printf("0 : Quitter\n");
     printf("Choix : ");
+    fflush(stdout);
 }
 
 int main()
@@ -41,7 +40,7 @@ int main()
 
         if (choix == 1) {
             printf("Nom du disque : ");
-            scanf("%s", nom);
+            scanf("%127s", nom);
 
             if (sf != NULL) {
                 DetruireSF(&sf);
@@ -69,7 +68,7 @@ int main()
                 printf("Aucun SF charge.\n");
             } else {
                 printf("Nom du fichier a ecrire : ");
-                scanf("%s", nom);
+                scanf("%127s", nom);
 
                 long res = EcrireFichierSF(sf, nom, ORDINAIRE);
 
@@ -86,7 +85,7 @@ int main()
                 printf("Aucun SF charge.\n");
             } else {
                 printf("Nom du fichier de sauvegarde : ");
-                scanf("%s", nom);
+                scanf("%127s", nom);
 
                 if (SauvegarderSF(sf, nom) == 0) {
                     printf("Sauvegarde reussie.\n");
@@ -98,7 +97,7 @@ int main()
 
         else if (choix == 5) {
             printf("Nom du fichier a charger : ");
-            scanf("%s", nom);
+            scanf("%127s", nom);
 
             if (sf != NULL) {
                 DetruireSF(&sf);

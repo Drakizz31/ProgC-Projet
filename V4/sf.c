@@ -389,6 +389,7 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
     sf->listeInodes.nbInodes++;
 
     /* Mettre à jour le répertoire racine (inode 0) */
+    /* Trouver inode 0 dans la liste */
     struct sListeInodesElement *it = sf->listeInodes.premier;
     tInode inode0 = NULL;
     while (it != NULL) {
@@ -400,29 +401,32 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
     }
 
     if (inode0 == NULL) {
-        return nbEcrits;
+        /* Pas d'inode 0 : erreur (normalement créé dans CreerSF) */
+        return (long)nbEcrits; /* fichier écrit mais pas ajouté au répertoire */
     }
 
-    /* Lire répertoire */
+    /* Lire répertoire depuis inode0 */
     tRepertoire rep = NULL;
     if (LireRepertoireDepuisInode(&rep, inode0) != 0) {
-        return nbEcrits;
+        /* n'arrive pas à lire le répertoire -> on laisse le fichier écrit */
+        return (long)nbEcrits;
     }
 
-    /* Ajouter entrée */
+    /* Ajouter l'entrée (nomFichier tel quel dans la racine) */
     if (EcrireEntreeRepertoire(rep, nomFichier, (unsigned int)numInode) != 0) {
         DetruireRepertoire(&rep);
-        return nbEcrits;
+        return (long)nbEcrits;
     }
 
-    /* Réécrire répertoire */
+    /* Écrire le répertoire modifié dans inode0 */
     if (EcrireRepertoireDansInode(rep, inode0) != 0) {
         DetruireRepertoire(&rep);
-        return nbEcrits;
+        return (long)nbEcrits;
     }
 
     DetruireRepertoire(&rep);
 
+    /* Mise à jour du super-bloc */
     sf->superBloc->dateDerModif = time(NULL);
 
     return nbEcrits;
@@ -434,27 +438,33 @@ long EcrireFichierSF(tSF sf, char nomFichier[], natureFichier type)
  * Entrées : le système de fichiers, le nom du fichier sauvegarde (sur disque)
  * Sortie : 0 en cas de succèe, -1 en cas d'erreur
  */
-int SauvegarderSF(tSF sf, char nomFichier[]) {
-
+int SauvegarderSF(tSF sf, char nomFichier[])
+{
     if (sf == NULL || nomFichier == NULL) return -1;
 
     FILE *f = fopen(nomFichier, "wb");
-    if (f == NULL) return -1;
+    if (!f) {
+        fprintf(stderr, "SauvegarderSF : impossible d'ouvrir %s\n", nomFichier);
+        return -1;
+    }
 
+    /* Écrire super-bloc */
     if (fwrite(sf->superBloc, sizeof(struct sSuperBloc), 1, f) != 1) {
         fclose(f);
         return -1;
     }
 
+    /* Écrire nombre d'inodes */
     if (fwrite(&(sf->listeInodes.nbInodes), sizeof(int), 1, f) != 1) {
         fclose(f);
         return -1;
     }
 
+    /* Écrire chaque inode */
     struct sListeInodesElement *elem = sf->listeInodes.premier;
-
     while (elem != NULL) {
 
+        /* Sauvegarde de la structure brute */
         if (SauvegarderInode(elem->inode, f) != 0) {
             fclose(f);
             return -1;
@@ -472,43 +482,43 @@ int SauvegarderSF(tSF sf, char nomFichier[]) {
  * Entrées : le système de fichiers où restaurer, le nom du fichier sauvegarde (sur disque)
  * Sortie : 0 en cas de succèe, -1 en cas d'erreur
  */
-int ChargerSF(tSF *pSF, char nomFichier[]) {
-
+int ChargerSF(tSF *pSF, char nomFichier[])
+{
     if (pSF == NULL || nomFichier == NULL) return -1;
 
     FILE *f = fopen(nomFichier, "rb");
-    if (f == NULL) return -1;
+    if (!f) {
+        fprintf(stderr, "ChargerSF : impossible d'ouvrir %s\n", nomFichier);
+        return -1;
+    }
 
-    *pSF = malloc(sizeof(struct sSF));
-    if (*pSF == NULL) {
+    tSF sf = malloc(sizeof(struct sSF));
+    if (!sf) {
         fclose(f);
         return -1;
     }
 
-    tSF sf = *pSF;
-
+    /* Chargement super-bloc */
     sf->superBloc = malloc(sizeof(struct sSuperBloc));
-    if (sf->superBloc == NULL) {
-        free(sf);
-        *pSF = NULL;
+    if (!sf->superBloc) {
         fclose(f);
+        free(sf);
         return -1;
     }
 
     if (fread(sf->superBloc, sizeof(struct sSuperBloc), 1, f) != 1) {
-        DetruireSuperBloc(&(sf->superBloc));
-        free(sf);
-        *pSF = NULL;
         fclose(f);
+        free(sf->superBloc);
+        free(sf);
         return -1;
     }
 
-    int nbInodes = 0;
-    if (fread(&nbInodes, sizeof(int), 1, f) != 1) {
-        DetruireSuperBloc(&(sf->superBloc));
-        free(sf);
-        *pSF = NULL;
+    /* Lire nombre d'inodes */
+    int nb;
+    if (fread(&nb, sizeof(int), 1, f) != 1) {
         fclose(f);
+        free(sf->superBloc);
+        free(sf);
         return -1;
     }
 
@@ -516,38 +526,38 @@ int ChargerSF(tSF *pSF, char nomFichier[]) {
     sf->listeInodes.dernier = NULL;
     sf->listeInodes.nbInodes = 0;
 
-    for (int i = 0; i < nbInodes; i++) {
+    /* Charger les inodes un par un */
+    for (int i = 0; i < nb; i++) {
 
         tInode inode = NULL;
         if (ChargerInode(&inode, f) != 0) {
-            DetruireSF(pSF);
             fclose(f);
+            DetruireSF(&sf);
             return -1;
         }
 
         struct sListeInodesElement *elem = malloc(sizeof(struct sListeInodesElement));
-        if (elem == NULL) {
-            DetruireInode(&inode);
-            DetruireSF(pSF);
+        if (!elem) {
             fclose(f);
+            DetruireInode(&inode);
+            DetruireSF(&sf);
             return -1;
         }
 
         elem->inode = inode;
         elem->suivant = NULL;
 
-        if (sf->listeInodes.premier == NULL) {
+        if (sf->listeInodes.premier == NULL)
             sf->listeInodes.premier = elem;
-            sf->listeInodes.dernier = elem;
-        } else {
+        else
             sf->listeInodes.dernier->suivant = elem;
-            sf->listeInodes.dernier = elem;
-        }
 
+        sf->listeInodes.dernier = elem;
         sf->listeInodes.nbInodes++;
     }
 
     fclose(f);
+    *pSF = sf;
     return 0;
 }
 
@@ -572,7 +582,6 @@ int Ls(tSF sf, bool detail) {
         elem = elem->suivant;
     }
     if (inode0 == NULL) {
-        /* pas de répertoire racine trouvé */
         return -1;
     }
 
@@ -587,17 +596,18 @@ int Ls(tSF sf, bool detail) {
     printf("Nombre de fichiers dans le répertoire racine : %d\n", nb);
 
     if (nb == 0) {
-        /* nettoyer et sortir */
         DetruireRepertoire(&rep);
         return 0;
     }
 
     /* récupérer les entrées */
-    struct sEntreesRepertoire *tab = malloc(sizeof(struct sEntreesRepertoire) * nb);
+    struct sEntreesRepertoire *tab =
+        malloc(sizeof(struct sEntreesRepertoire) * nb);
     if (tab == NULL) {
         DetruireRepertoire(&rep);
         return -1;
     }
+
     int nbRecup = EntreesContenuesDansRepertoire(rep, tab);
     if (nbRecup < 0) {
         free(tab);
@@ -608,16 +618,15 @@ int Ls(tSF sf, bool detail) {
     if (!detail) {
         /* affichage simple : un nom par ligne */
         for (int i = 0; i < nbRecup; i++) {
-            printf("%s\n", tab[i].nomEntree);
+            printf("%s\n", tab[i].nomEntree);   // ← correct
         }
     } else {
-        /* affichage détaillé : pour chaque entrée afficher
-           %-3u %-12s %6ld %s %s
-           numéro inode, type, taille, date modif (format ctime sans \n), nom */
+        /* affichage détaillé */
         for (int i = 0; i < nbRecup; i++) {
+
             unsigned int num = tab[i].numeroInode;
 
-            /* trouver l'inode correspondant au numéro 'num' */
+            /* trouver inode correspondant */
             struct sListeInodesElement *e2 = sf->listeInodes.premier;
             tInode inodeEntry = NULL;
             while (e2 != NULL) {
@@ -628,10 +637,10 @@ int Ls(tSF sf, bool detail) {
                 e2 = e2->suivant;
             }
 
-            /* si inode introuvable, on affiche des valeurs par défaut */
             natureFichier nf = AUTRE;
             long taille = 0;
             time_t tm = (time_t)0;
+
             if (inodeEntry != NULL) {
                 nf = Type(inodeEntry);
                 taille = Taille(inodeEntry);
@@ -643,13 +652,10 @@ int Ls(tSF sf, bool detail) {
             else if (nf == REPERTOIRE) typeStr = "REPERTOIRE";
 
             char datebuf[32];
-            if (tm == (time_t)0) {
-                datebuf[0] = '\0';
-            } else {
+            if (tm == (time_t)0) datebuf[0] = '\0';
+            else {
                 char *c = ctime(&tm);
-                if (c == NULL) datebuf[0] = '\0';
-                else {
-                    /* ctime rend une chaîne qui se termine par '\n' */
+                if (c != NULL) {
                     strncpy(datebuf, c, sizeof(datebuf)-1);
                     datebuf[sizeof(datebuf)-1] = '\0';
                     size_t L = strlen(datebuf);
@@ -662,10 +668,12 @@ int Ls(tSF sf, bool detail) {
                    typeStr,
                    taille,
                    datebuf,
-                   tab[i].nomEntree);
+                   tab[i].nomEntree);   // ← correct
         }
     }
+
     free(tab);
     DetruireRepertoire(&rep);
     return 0;
 }
+
